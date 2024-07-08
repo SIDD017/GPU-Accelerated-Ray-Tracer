@@ -2,6 +2,7 @@
 #define TRACER_H
 
 #include <stdio.h>
+#include "vec3.cuh"
 
 namespace CUDA_Tracer {
 class Tracer {
@@ -10,7 +11,7 @@ class Tracer {
     int ny;
     int num_pixels;
     size_t fb_size;
-    float *fb;
+    vec3 *fb;
 
     public:
     Tracer(int nx, int ny);
@@ -19,7 +20,7 @@ class Tracer {
     void output_image();
 };
 
-__global__ void render(int nx, int ny, float *fb);
+__global__ void render(int nx, int ny, vec3 *fb);
 }
 
 #endif
