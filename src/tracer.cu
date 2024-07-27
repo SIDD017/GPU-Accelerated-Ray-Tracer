@@ -39,7 +39,7 @@ void render(int nx, int ny, vec3 *fb) {
          return;
     }
     int pixel_index = j * nx + i;
-    fb[pixel_index] = vec3(float(i) / nx, float(j) / ny, 0.2f);
+    fb[pixel_index] = vec3(float(i) / nx, 0.2f, float(j) / ny);
 }
 
 void Tracer::output_image() {
