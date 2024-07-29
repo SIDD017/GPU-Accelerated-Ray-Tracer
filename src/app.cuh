@@ -1,9 +1,9 @@
 #ifndef APP_H
 #define APP_H
 
-#include "UI/UI.h"
+#include "UI/UI.cuh"
 // #include "data/scene.h"
-#include "engine/Shader.h"
+#include "engine/Shader.cuh"
 
 /* Remember to always include GLAD before GLFW. */
 #include <glad/glad.h>

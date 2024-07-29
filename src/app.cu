@@ -1,4 +1,4 @@
-#include "app.h"
+#include "app.cuh"
 
 namespace App {
 
@@ -59,12 +59,16 @@ void Engine::processInput(GLFWwindow *window) {
 }
 
 void Engine::init_shaders() {
-  shaders = new Shader("src/shaders/test_vert.glsl", "src/shaders/test_frag.glsl");
+  shaders = new Shader("shaders/vert.glsl", "shaders/frag.glsl");
 
   float vertices[] = {
-    -0.5f, -0.5f, 0.0f, // left  
-     0.5f, -0.5f, 0.0f, // right 
-     0.0f,  0.5f, 0.0f  // top
+    -1.0f, -1.0f, 0.0f,-1.0f,-1.0f,  
+    -1.0f,  1.0f, 0.0f,-1.0f, 1.0f, 
+     1.0f, -1.0f, 0.0f, 1.0f,-1.0f,
+
+    -1.0f,  1.0f, 0.0f,-1.0f, 1.0f, 
+     1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+     1.0f, -1.0f, 0.0f, 1.0f,-1.0f
   };
 
   unsigned int VBO;
@@ -75,23 +79,47 @@ void Engine::init_shaders() {
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
+
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
-  
 }
 
 void Engine::draw() {
   shaders->use_shader();
   glBindVertexArray(VAO);
-  glDrawArrays(GL_TRIANGLES, 0, 3);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void Engine::execute() {
 
   init_shaders();
+
+  unsigned int texture;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // load and generate the texture
+  int width, height, nrChannels;
+  unsigned char *data = stbi_load("wall.jpg", &width, &height, &nrChannels, 0);
+  if (data)
+  {
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+      glGenerateMipmap(GL_TEXTURE_2D);
+  }
+  else
+  {
+      std::cout << "Failed to load texture" << std::endl;
+  }
+  stbi_image_free(data);
+
   /* Main Render loop */
   while (!glfwWindowShouldClose(context->window)) {
 
@@ -100,6 +128,7 @@ void Engine::execute() {
     /* Render here */
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+    glBindTexture(GL_TEXTURE_2D, texture);
 
     /* If draw callback is not NULL, the render the scene */
     draw();

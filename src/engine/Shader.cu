@@ -1,4 +1,4 @@
-#include "Shader.h"
+#include "Shader.cuh"
 
 namespace App {
 

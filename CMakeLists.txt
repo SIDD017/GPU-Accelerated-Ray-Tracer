@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 project(GPURayTracer LANGUAGES CUDA CXX C)
 
 set(OpenGL_GL_PREFERENCE GLVND)
@@ -17,6 +17,9 @@ add_subdirectory(dependencies/glad)
 add_subdirectory(dependencies/glfw)
 add_subdirectory(dependencies/stb_image)
 add_subdirectory(dependencies/glm)
+
+# find_package(CUDA REQUIRED)
+# include_directories("${CUDA_INCLUDE_DIRS}")
 
 # ImGui
 set(imgui-directory dependencies/imgui)
@@ -38,6 +41,8 @@ set(imgui-source ${imgui-directory}/imconfig.h
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin)
 
 file(GLOB_RECURSE source CONFIGURE_DEPENDS "src/*.h" "src/*.hpp" "src/*.cuh" "src/*.cu" "src/*.cpp" "src/*.cc")
+# TODO: Find a better solution for relative path to shader files, right now we are simply copying the shader files to the output directory
+file(COPY ${CMAKE_SOURCE_DIR}/src/shaders DESTINATION ${CMAKE_BINARY_DIR}/bin/Debug )
 
 add_executable(GPURayTracer ${source} ${imgui-source})
 target_link_libraries(GPURayTracer ${OPENGL_LIBRARIES} glad glfw stb_image glm)
