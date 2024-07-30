@@ -63,13 +63,13 @@ void Engine::init_shaders() {
   shaders = new Shader("shaders/vert.glsl", "shaders/frag.glsl");
 
   float vertices[] = {
-    -1.0f, -1.0f, 0.0f,-1.0f,-1.0f,  
-    -1.0f,  1.0f, 0.0f,-1.0f, 1.0f, 
-     1.0f, -1.0f, 0.0f, 1.0f,-1.0f,
+    -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,  
+    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 
+     1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
 
-    -1.0f,  1.0f, 0.0f,-1.0f, 1.0f, 
+    -1.0f,  1.0f, 0.0f, 0.0f, 1.0f, 
      1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-     1.0f, -1.0f, 0.0f, 1.0f,-1.0f
+     1.0f, -1.0f, 0.0f, 1.0f, 0.0f
   };
 
   unsigned int VBO;
@@ -117,35 +117,11 @@ void Engine::execute() {
    glGenBuffers(1, &PBO);
    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
    glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_WIDTH * SCR_HEIGHT * 4, NULL, GL_DYNAMIC_COPY);
-  //  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
    cudaGraphicsGLRegisterBuffer(&cgr, PBO, cudaGraphicsRegisterFlagsNone);
-   //Pass CGR to CUDA Tracer
    tracer->draw(8, 8, cgr);
-   //Render
-  //  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
    glBindTexture(GL_TEXTURE_2D, texture);
    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
    glGenerateMipmap(GL_TEXTURE_2D);
-  //Create a cudaGraphicsResource resource
-  //Use cudaGraphicsGLRegisterBuffer() to map PBO to the resource
-  //Use cudaGraphicsMapResources() to map the resourcec ofr access by cuda
-  //Get a device pointer using cudaGraphicsResourceGetMappedPointer() to get access to the mapped resource
-  //Do rendering operations on CUDA and store results in the resource at the device pointer location
-  //Unmap the resource using cudaGraphicsUnmapResources()
-
-
-  // int width, height, nrChannels;
-  // unsigned char *data = stbi_load("wall.jpg", &width, &height, &nrChannels, 0);
-  // if (data)
-  // {
-  //     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-  //     glGenerateMipmap(GL_TEXTURE_2D);
-  // }
-  // else
-  // {
-  //     std::cout << "Failed to load texture" << std::endl;
-  // }
-  // stbi_image_free(data);
 
   /* Main Render loop */
   while (!glfwWindowShouldClose(context->window)) {
@@ -177,15 +153,3 @@ void Engine::execute() {
 }
 
 } // namespace App
-
-
-
-/** TODO:
- * - Shader Class
- * - Hello Triangle
- * - Camera class
- * - Model Class
- * - Mesh class
- * - Scene graph
- * - Basic UI abstraction / wrapper for ImGUI
-*/

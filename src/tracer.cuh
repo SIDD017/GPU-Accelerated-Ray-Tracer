@@ -23,7 +23,6 @@ class Tracer {
 };
 
 __global__ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr);
-__global__ void pbo_test(int nx, int ny, uint32_t* dev);
 }
 
 #endif

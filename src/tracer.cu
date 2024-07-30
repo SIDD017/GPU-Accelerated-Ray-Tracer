@@ -24,19 +24,14 @@ void Tracer::draw(int tx, int ty, cudaGraphicsResource_t resource) {
     std::cerr << " in " << tx << "x" << ty << " blocks.\n";
     clock_t start, stop;
     start = clock();
-
     dim3 blocks(nx/tx+1, ny/ty+1);
     dim3 threads(tx, ty);
     render<<<blocks, threads>>>(nx, ny, fb, dev_ptr);
     CHECK_CUDA_ERRORS(cudaGetLastError());
     CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
-    // pbo_test<<<blocks, threads>>>(nx, ny, dev_ptr);
-    // CHECK_CUDA_ERRORS(cudaGetLastError());
-    // CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
     stop = clock();
     double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
     std::cerr << "took" << timer_seconds << " seconds.\n";
-    // std::cerr << fb_size << "\n";
     // output_image();
     CHECK_CUDA_ERRORS(cudaGraphicsUnmapResources(1, &resource));
 }
@@ -65,16 +60,6 @@ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr) {
     //Ideally would use these glm functions, but this always returning 0 for some reason
     // dev_ptr[pixel_index] = glm::packUnorm4x8(glm::vec4(fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 1.0f));
     dev_ptr[pixel_index] = 0xFF000000 | finalb | finalg | finalr;
-}
-
-__global__ void pbo_test(int nx, int ny, uint32_t* dev) {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
-    int j = threadIdx.y + blockIdx.y * blockDim.y;
-    if((i >= nx) || (j >= ny)) {
-         return;
-    }
-    int pixel_index = j * nx + i;
-    printf("%d\n", dev[pixel_index]);
 }
 
 void Tracer::output_image() {
