@@ -50,23 +50,21 @@ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr) {
     }
     int pixel_index = j * nx + i;
     fb[pixel_index] = vec3(float(i) / nx, 0.2f, float(j) / ny);
-    // int b = 255 * 1.0f;
-    // int g = 255 * 1.0f;
-    // int r = 255 * 1.0f;
-    // uint8_t ub = 0x00 + b;
-    // uint8_t ug = 0x00 + g;
-    // uint8_t ur = 0x00 + r;
-    // uint32_t u32b = ub;
-    // uint32_t u32g = ug;
-    // uint32_t u32r = ur;
-    // uint32_t finalb = 0x00000000 | (u32b << 16);
-    // uint32_t finalg = 0x00000000 | (u32g << 8);
-    // uint32_t finalr = 0x00000000 | (u32r);
-    dev_ptr[pixel_index] = 13172000;
-    // dev_ptr[3686300] = 32;
-    // dev_ptr[pixel_index] = glm::packUnorm4x8(glm::vec4(0, 127, 255, 255));
-    // dev_ptr[pixel_index] = 0xFF000000 | finalb | finalg | finalr;
-    // printf("%d\n", dev_ptr[pixel_index]);
+    int b = 255 * float(j) / ny;
+    int g = 255 * 0.2f;
+    int r = 255 * float(i) / nx;
+    uint8_t ub = 0x00 + b;
+    uint8_t ug = 0x00 + g;
+    uint8_t ur = 0x00 + r;
+    uint32_t u32b = ub;
+    uint32_t u32g = ug;
+    uint32_t u32r = ur;
+    uint32_t finalb = 0x00000000 | (u32b << 16);
+    uint32_t finalg = 0x00000000 | (u32g << 8);
+    uint32_t finalr = 0x00000000 | (u32r);
+    //Ideally would use these glm functions, but this always returning 0 for some reason
+    // dev_ptr[pixel_index] = glm::packUnorm4x8(glm::vec4(fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 1.0f));
+    dev_ptr[pixel_index] = 0xFF000000 | finalb | finalg | finalr;
 }
 
 __global__ void pbo_test(int nx, int ny, uint32_t* dev) {

@@ -63,7 +63,7 @@ void Engine::init_shaders() {
   shaders = new Shader("shaders/vert.glsl", "shaders/frag.glsl");
 
   float vertices[] = {
-    -0.8f, -0.8f, 0.0f,-1.0f,-1.0f,  
+    -1.0f, -1.0f, 0.0f,-1.0f,-1.0f,  
     -1.0f,  1.0f, 0.0f,-1.0f, 1.0f, 
      1.0f, -1.0f, 0.0f, 1.0f,-1.0f,
 
