@@ -4,6 +4,7 @@
 #include "UI/UI.cuh"
 // #include "data/scene.h"
 #include "engine/Shader.cuh"
+#include "tracer.cuh"
 
 /* Remember to always include GLAD before GLFW. */
 #include <glad/glad.h>
