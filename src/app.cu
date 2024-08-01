@@ -91,6 +91,11 @@ void Engine::init_shaders() {
 }
 
 void Engine::draw() {
+  tracer->draw(8, 8, cgr);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  
   shaders->use_shader();
   glBindVertexArray(VAO);
   glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -99,9 +104,8 @@ void Engine::draw() {
 void Engine::execute() {
 
   init_shaders();
-  CUDA_Tracer::Tracer* tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT);
-
-  unsigned int texture;
+  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT);
+  
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
@@ -110,18 +114,13 @@ void Engine::execute() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // load and generate the texture
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-   glBindTexture(GL_TEXTURE_2D, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
 
-   cudaGraphicsResource_t cgr;
-   unsigned int PBO;
-   glGenBuffers(1, &PBO);
-   glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
-   glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_WIDTH * SCR_HEIGHT * 4, NULL, GL_DYNAMIC_COPY);
-   cudaGraphicsGLRegisterBuffer(&cgr, PBO, cudaGraphicsRegisterFlagsNone);
-   tracer->draw(8, 8, cgr);
-   glBindTexture(GL_TEXTURE_2D, texture);
-   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
-   glGenerateMipmap(GL_TEXTURE_2D);
+  unsigned int PBO;
+  glGenBuffers(1, &PBO);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, PBO);
+  glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_WIDTH * SCR_HEIGHT * 4, NULL, GL_DYNAMIC_COPY);
+  cudaGraphicsGLRegisterBuffer(&cgr, PBO, cudaGraphicsRegisterFlagsNone);
 
   /* Main Render loop */
   while (!glfwWindowShouldClose(context->window)) {
@@ -131,7 +130,6 @@ void Engine::execute() {
     /* Render here */
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
-    glBindTexture(GL_TEXTURE_2D, texture);
 
     /* If draw callback is not NULL, the render the scene */
     draw();

@@ -5,6 +5,7 @@
 //Remove from app.cuh maybe
 #include <glm/glm.hpp>
 #include "vec3.cuh"
+#include "ray.cuh"
 
 namespace CUDA_Tracer {
 class Tracer {
@@ -22,7 +23,7 @@ class Tracer {
     void output_image();
 };
 
-__global__ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr);
+__global__ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr, vec3 lower_left_corner, vec3 horizontal, vec3 vertical, vec3 origin);
 }
 
 #endif

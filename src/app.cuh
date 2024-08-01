@@ -32,6 +32,9 @@ private:
   Context *context;
   /* TODO: Chande this to an array or vector of shaders. */
   Shader *shaders;
+  cudaGraphicsResource_t cgr;
+  CUDA_Tracer::Tracer* tracer;
+  unsigned int texture;
   unsigned int VAO;
 public:
   Engine();
