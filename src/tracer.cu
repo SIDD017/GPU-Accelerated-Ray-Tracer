@@ -68,9 +68,9 @@ __device__ uint32_t rgb_to_uint_32(const vec3& col) {
     uint32_t u32b = ub;
     uint32_t u32g = ug;
     uint32_t u32r = ur;
-    uint32_t finalb = 0x00000000 | (u32b << 16);
+    uint32_t finalb = 0x00000000 | (u32b);
     uint32_t finalg = 0x00000000 | (u32g << 8);
-    uint32_t finalr = 0x00000000 | (u32r);
+    uint32_t finalr = 0x00000000 | (u32r << 16);
     return 0xFF000000 | finalb | finalg | finalr;
 }
 
@@ -88,6 +88,7 @@ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr, vec3 lower_left_corner,
     fb[pixel_index] = color(r);
     //Ideally would use these glm functions, but this always returning 0 for some reason
     // dev_ptr[pixel_index] = glm::packUnorm4x8(glm::vec4(fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 1.0f));
+    // printf("%f, %f, %f \n", fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b());
     dev_ptr[pixel_index] = rgb_to_uint_32(fb[pixel_index]);
 }
 
