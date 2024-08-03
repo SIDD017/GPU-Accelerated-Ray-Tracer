@@ -133,9 +133,9 @@ __host__ __device__ inline vec3& vec3::operator*=(const float t) {
 
 __host__ __device__ inline vec3& vec3::operator/=(const float t) {
     float k = 1.0/t;
-    e[0] /= k;
-    e[1] /= k;
-    e[2] /= k;
+    e[0] *= k;
+    e[1] *= k;
+    e[2] *= k;
     return *this;
 }
 
