@@ -23,7 +23,9 @@ class Tracer {
     void output_image();
 };
 
-__global__ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr, vec3 lower_left_corner, vec3 horizontal, vec3 vertical, vec3 origin);
+// __global__ void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr, vec3 lower_left_corner, vec3 horizontal, vec3 vertical, vec3 origin, hitable **world);
+// __global__ void create_world(hitable **d_list, hitable **d_world);
+// __global__ void free_world(hitable **d_list, hitable **d_world);
 }
 
 #endif

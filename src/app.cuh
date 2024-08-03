@@ -16,8 +16,8 @@
 
 #include <iostream>
 
-#define SCR_WIDTH 1280
-#define SCR_HEIGHT 720
+#define SCR_WIDTH 1920
+#define SCR_HEIGHT 1080
 
 namespace App {
 
