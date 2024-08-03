@@ -104,7 +104,7 @@ void Engine::draw() {
 void Engine::execute() {
 
   init_shaders();
-  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT, 10);
+  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT, 32);
   
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);

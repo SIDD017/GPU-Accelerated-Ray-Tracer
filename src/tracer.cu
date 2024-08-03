@@ -79,7 +79,7 @@ __device__ uint32_t rgb_to_uint_32(const vec3& col) {
     return 0xFF000000 | finalb | finalg | finalr;
 }
 
-__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera) {
+__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera, int nx, int ny) {
     if (threadIdx.x == 0 && blockIdx.x == 0) {
         d_list[0] = new sphere(vec3(0,0,-1), 0.5,
                                 new lambertian(vec3(0.1, 0.2, 0.5)));
@@ -92,7 +92,11 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
         d_list[4] = new sphere(vec3(-1,0,-1), -0.45,
                                  new dielectric(1.5));
         *d_world = new hitable_list(d_list,5);
-        *d_camera = new camera();
+        *d_camera   = new camera(vec3(-2,2,1),
+                                 vec3(0,0,-1),
+                                 vec3(0,1,0),
+                                 20.0,
+                                 float(nx)/float(ny));
     }
 }
 
@@ -154,7 +158,7 @@ void Tracer::draw(int tx, int ty, cudaGraphicsResource_t resource) {
     CHECK_CUDA_ERRORS(cudaMalloc((void **)&d_world, sizeof(hitable *)));
     camera **d_camera;
     CHECK_CUDA_ERRORS(cudaMalloc((void **)&d_camera, sizeof(camera *)));
-    create_world<<<1,1>>>(d_list,d_world,d_camera);
+    create_world<<<1,1>>>(d_list,d_world,d_camera, nx, ny);
     CHECK_CUDA_ERRORS(cudaGetLastError());
     CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
 
