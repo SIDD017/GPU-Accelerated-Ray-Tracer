@@ -12,12 +12,13 @@ class Tracer {
     private:
     int nx;
     int ny;
+    int ns;
     int num_pixels;
     size_t fb_size;
     vec3 *fb;
 
     public:
-    Tracer(int nx, int ny);
+    Tracer(int nx, int ny, int ns);
     ~Tracer();
     void draw(int tx, int ty, cudaGraphicsResource_t resource);
     void output_image();

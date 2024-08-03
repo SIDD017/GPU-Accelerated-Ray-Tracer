@@ -1,12 +1,15 @@
+#include <curand_kernel.h>
 #include "tracer.cuh"
 #include "defines.cuh"
 #include "sphere.cuh"
 #include "hitable_list.cuh"
+#include "camera.cuh"
 namespace CUDA_Tracer {
 
-Tracer::Tracer(int nx, int ny) {
+Tracer::Tracer(int nx, int ny, int ns) {
     this->nx = nx;
     this->ny = ny;
+    this->ns = ns;
     this->num_pixels = nx * ny;
     fb_size = num_pixels * sizeof(vec3);
     // CHECK_CUDA_ERRORS(cudaMallocManaged((void **)&fb, fb_size));
@@ -23,16 +26,34 @@ __device__ bool hit_sphere(const vec3& center, float radius, const ray& r) {
     return (discriminant > 0.0f);
 }
 
-__device__ vec3 color(const ray& r, hitable **world) {
-    hit_record rec;
-    if ((*world)->hit(r, 0.0,FLT_MAX, rec)) {
-        return 0.5f * vec3(rec.normal.x() + 1.0f, rec.normal.y() + 1.0f, rec.normal.z() + 1.0f);
+#define RANDVEC3 vec3(curand_uniform(local_rand_state),curand_uniform(local_rand_state),curand_uniform(local_rand_state))
+
+__device__ vec3 random_in_unit_sphere(curandState *local_rand_state) {
+    vec3 p;
+    do {
+        p = 2.0f*RANDVEC3 - vec3(1,1,1);
+    } while (p.squared_length() >= 1.0f);
+    return p;
+}
+
+__device__ vec3 color(const ray& r, hitable **world, curandState *local_rand_state) {
+    ray cur_ray = r;
+    float cur_attenuation = 1.0f;
+    for(int i = 0; i < 50; i++) {
+        hit_record rec;
+        if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
+            vec3 target = rec.p + rec.normal + random_in_unit_sphere(local_rand_state);
+            cur_attenuation *= 0.5f;
+            cur_ray = ray(rec.p, target-rec.p);
+        }
+        else {
+            vec3 unit_direction = unit_vector(cur_ray.direction());
+            float t = 0.5f*(unit_direction.y() + 1.0f);
+            vec3 c = (1.0f-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
+            return cur_attenuation * c;
+        }
     }
-    else {
-        vec3 unit_direction = unit_vector(r.direction());
-        float t = 0.5f * (unit_direction.y() + 1.0f);
-        return (1.0f - t) * vec3(1.0f, 1.0f, 1.0f) + t*vec3(0.5f, 0.7f, 1.0f);
-    }
+    return vec3(0.0,0.0,0.0);
 }
  
 __device__ uint32_t rgb_to_uint_32(const vec3& col) {
@@ -51,36 +72,55 @@ __device__ uint32_t rgb_to_uint_32(const vec3& col) {
     return 0xFF000000 | finalb | finalg | finalr;
 }
 
-__global__ void create_world(hitable **d_list, hitable **d_world) {
+__global__ void create_world(hitable **d_list, hitable **d_world, camera **d_camera) {
     if(threadIdx.x == 0 && blockIdx.x == 0) {
         *(d_list) = new sphere(vec3(0, 0, -1), 0.5);
         *(d_list+1) = new sphere(vec3(0,-100.5,-1), 100);
         *d_world    = new hitable_list(d_list,2);
+        *d_camera   = new camera();
     }
 }
 
+__global__ void render_init(int max_x, int max_y, curandState *rand_state) {
+    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    int j = threadIdx.y + blockIdx.y * blockDim.y;
+    if((i >= max_x) || (j >= max_y)) return;
+    int pixel_index = j*max_x + i;
+    //Each thread gets same seed, a different sequence number, no offset
+    curand_init(1984, pixel_index, 0, &rand_state[pixel_index]);
+}
+
 __global__
-void render(int nx, int ny, vec3 *fb, uint32_t* dev_ptr, vec3 lower_left_corner, vec3 horizontal, vec3 vertical, vec3 origin, hitable **world) {
+void render(int nx, int ny, int ns, vec3 *fb, uint32_t* dev_ptr, camera **cam, hitable **world, curandState *rand_state) {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
     int j = threadIdx.y + blockIdx.y * blockDim.y;
     if((i >= nx) || (j >= ny)) {
          return;
     }
     int pixel_index = j * nx + i;
-    float u = float(i) / float(nx);
-    float v = float(j) / float(ny);
-    ray r(origin, lower_left_corner + u*horizontal + v*vertical);
+    curandState local_rand_state = rand_state[pixel_index];
+    vec3 col(0,0,0);
+    for(int s=0; s < ns; s++) {
+        float u = float(i + curand_uniform(&local_rand_state)) / float(nx);
+        float v = float(j + curand_uniform(&local_rand_state)) / float(ny);
+        // printf("%f\n", curand_uniform(&local_rand_state));
+        ray r = (*cam)->get_ray(u,v);
+        col += color(r, world, &local_rand_state);
+    }
+    // ray r(origin, lower_left_corner + u*horizontal + v*vertical);
     // fb[pixel_index] = color(r, world);
     //Ideally would use these glm functions, but this always returning 0 for some reason
     // dev_ptr[pixel_index] = glm::packUnorm4x8(glm::vec4(fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b(), 1.0f));
     // printf("%f, %f, %f \n", fb[pixel_index].r(), fb[pixel_index].g(), fb[pixel_index].b());
-    dev_ptr[pixel_index] = rgb_to_uint_32(color(r, world));
+    // printf("%f, %f, %F", col.r(), col.g(), col.b());
+    dev_ptr[pixel_index] = rgb_to_uint_32(col/float(ns));
 }
 
-__global__ void free_world(hitable **d_list, hitable **d_world) {
+__global__ void free_world(hitable **d_list, hitable **d_world, camera **d_camera) {
     delete *(d_list);
     delete *(d_list + 1);
-    delete d_world;
+    delete *d_world;
+    delete *d_camera;
 }
 
 
@@ -93,11 +133,15 @@ void Tracer::draw(int tx, int ty, cudaGraphicsResource_t resource) {
     CHECK_CUDA_ERRORS(cudaGraphicsResourceGetMappedPointer((void**)&(dev_ptr), &(pbo_size), resource));
     // std::cerr << "Rendering a " << nx << "x" << ny << " image ";
     // std::cerr << " in " << tx << "x" << ty << " blocks.\n";
+    curandState *d_rand_state;
+    CHECK_CUDA_ERRORS(cudaMalloc((void **)&d_rand_state, num_pixels*sizeof(curandState)));
     hitable **d_list;
     CHECK_CUDA_ERRORS(cudaMalloc((void **)&d_list, 2*sizeof(hitable *)));
     hitable **d_world;
     CHECK_CUDA_ERRORS(cudaMalloc((void **)&d_world, sizeof(hitable *)));
-    create_world<<<1,1>>>(d_list,d_world);
+    camera **d_camera;
+    CHECK_CUDA_ERRORS(cudaMalloc((void **)&d_camera, sizeof(camera *)));
+    create_world<<<1,1>>>(d_list,d_world, d_camera);
     CHECK_CUDA_ERRORS(cudaGetLastError());
     CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
 
@@ -105,12 +149,11 @@ void Tracer::draw(int tx, int ty, cudaGraphicsResource_t resource) {
     start = clock();
     dim3 blocks(nx/tx+1, ny/ty+1);
     dim3 threads(tx, ty);
-    render<<<blocks, threads>>>(nx, ny, fb, dev_ptr, 
-                                vec3(-2.0, -1.0, -1.0),
-                                vec3(4.0, 0.0, 0.0),
-                                vec3(0.0, 2.0, 0.0),
-                                vec3(0.0, 0.0, 0.0),
-                                d_world);
+    render_init<<<blocks, threads>>>(nx, ny, d_rand_state);
+    CHECK_CUDA_ERRORS(cudaGetLastError());
+    CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
+    render<<<blocks, threads>>>(nx, ny, ns, fb, dev_ptr, 
+                                d_camera, d_world, d_rand_state);
     CHECK_CUDA_ERRORS(cudaGetLastError());
     CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
     stop = clock();
@@ -120,10 +163,12 @@ void Tracer::draw(int tx, int ty, cudaGraphicsResource_t resource) {
     CHECK_CUDA_ERRORS(cudaGraphicsUnmapResources(1, &resource));
 
     CHECK_CUDA_ERRORS(cudaDeviceSynchronize());
-    free_world<<<1,1>>>(d_list,d_world);
+    free_world<<<1,1>>>(d_list,d_world, d_camera);
     CHECK_CUDA_ERRORS(cudaGetLastError());
     CHECK_CUDA_ERRORS(cudaFree(d_list));
     CHECK_CUDA_ERRORS(cudaFree(d_world));
+    CHECK_CUDA_ERRORS(cudaFree(d_camera));
+    CHECK_CUDA_ERRORS(cudaFree(d_rand_state));
     // CHECK_CUDA_ERRORS(cudaFree(fb));
 }
 
