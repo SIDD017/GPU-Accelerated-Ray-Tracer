@@ -42,6 +42,8 @@ Engine::Engine() {
   }
 
   context->UI = new UI(context->window);
+  deltaTime = 0.0f;
+  lastFrame = 0.0f;
 }
 
 Engine::~Engine() { glfwTerminate(); }
@@ -52,10 +54,44 @@ void Engine::framebuffer_size_callback(GLFWwindow *window, int width,
   glViewport(0, 0, width, height);
 }
 
+// void updateCameraVectors()
+// {
+//   float velocity = MovementSpeed * deltaTime;
+//   if (direction == FORWARD)
+//       Position += Front * velocity;
+//   if (direction == BACKWARD)
+//       Position -= Front * velocity;
+//   if (direction == LEFT)
+//       Position -= Right * velocity;
+//   if (direction == RIGHT)
+//       Position += Right * velocity;
+// }
+
 /* Callback to process input events */
-void Engine::processInput(GLFWwindow *window) {
+void Engine::processInput(GLFWwindow *window, CUDA_Tracer::camera_properties *cam, float deltaTime) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(window, true);
+  }
+  float velocity = cam->movement_speed * deltaTime;
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+    CUDA_Tracer::vec3 Front = CUDA_Tracer::unit_vector(cam->look_at - cam->look_from);
+    cam->look_from += Front * velocity;
+    cam->look_at += Front * velocity;
+  }
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+    CUDA_Tracer::vec3 Front = CUDA_Tracer::unit_vector(cam->look_at - cam->look_from);
+    cam->look_from -= Front * velocity;
+    cam->look_at -= Front * velocity;
+  }
+  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+    CUDA_Tracer::vec3 Right = CUDA_Tracer::unit_vector(CUDA_Tracer::cross((cam->look_at - cam->look_from), cam->vup));
+    cam->look_from -= Right * velocity;
+    cam->look_at -= Right * velocity;
+  }
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+    CUDA_Tracer::vec3 Right = CUDA_Tracer::unit_vector(CUDA_Tracer::cross((cam->look_at - cam->look_from), cam->vup));
+    cam->look_from += Right * velocity;
+    cam->look_at += Right * velocity;
   }
 }
 
@@ -90,8 +126,9 @@ void Engine::init_shaders() {
   glBindVertexArray(0);
 }
 
-void Engine::draw() {
-  tracer->draw(8, 8, cgr);
+void Engine::draw(CUDA_Tracer::camera_properties &cam) {
+  processInput(context->window, &cam, deltaTime);
+  tracer->draw(32, 32, cgr, cam);
   glBindTexture(GL_TEXTURE_2D, texture);
   glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
   glGenerateMipmap(GL_TEXTURE_2D);
@@ -104,7 +141,7 @@ void Engine::draw() {
 void Engine::execute() {
 
   init_shaders();
-  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT, 32);
+  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT, 10);
   
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
@@ -122,9 +159,19 @@ void Engine::execute() {
   glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_WIDTH * SCR_HEIGHT * 4, NULL, GL_DYNAMIC_COPY);
   cudaGraphicsGLRegisterBuffer(&cgr, PBO, cudaGraphicsRegisterFlagsNone);
 
+  CUDA_Tracer::camera_properties cam;
+  cam.look_at = CUDA_Tracer::vec3(0,0,-1);
+  cam.look_from = CUDA_Tracer::vec3(3,3,2);
+  cam.aperture = 2.0;
+  cam.vup = CUDA_Tracer::vec3(0,1,0);
+  cam.vfov = 20.0;
+  cam.movement_speed = 2.5f;
+
   /* Main Render loop */
   while (!glfwWindowShouldClose(context->window)) {
-
+    float currentFrame = static_cast<float>(glfwGetTime());
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
     context->UI->overlay();
 
     /* Render here */
@@ -132,7 +179,7 @@ void Engine::execute() {
     glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
 
     /* If draw callback is not NULL, the render the scene */
-    draw();
+    draw(cam);
 
     /* If scene graph is not NULL then render the scene */
 

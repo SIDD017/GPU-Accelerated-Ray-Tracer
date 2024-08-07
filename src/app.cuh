@@ -36,6 +36,8 @@ private:
   CUDA_Tracer::Tracer* tracer;
   unsigned int texture;
   unsigned int VAO;
+  float deltaTime;
+  float lastFrame;
 public:
   Engine();
   ~Engine();
@@ -43,12 +45,12 @@ public:
   /* Callbacks */
   static void framebuffer_size_callback(GLFWwindow *window, int width,
                                         int height);
-  static void processInput(GLFWwindow *window);
+  static void processInput(GLFWwindow *window, CUDA_Tracer::camera_properties *cam, float deltaTime);
 
   /* Controller Layer */
   void execute();
   void init_shaders();
-  void draw();
+  void draw(CUDA_Tracer::camera_properties &cam);
 };
 } // namespace App
 

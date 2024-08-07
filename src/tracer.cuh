@@ -8,6 +8,16 @@
 #include "ray.cuh"
 
 namespace CUDA_Tracer {
+
+struct camera_properties {
+    vec3 look_from;
+    vec3 look_at;
+    float aperture;
+    vec3 vup;
+    float vfov;
+    float movement_speed;
+};
+
 class Tracer {
     private:
     int nx;
@@ -20,7 +30,7 @@ class Tracer {
     public:
     Tracer(int nx, int ny, int ns);
     ~Tracer();
-    void draw(int tx, int ty, cudaGraphicsResource_t resource);
+    void draw(int tx, int ty, cudaGraphicsResource_t resource, camera_properties cam);
     void output_image();
 };
 
