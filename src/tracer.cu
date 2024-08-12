@@ -92,14 +92,14 @@ __global__ void create_world(hitable **d_list, hitable **d_world, camera **d_cam
         d_list[4] = new sphere(vec3(-1,0,-1), -0.45,
                                  new dielectric(1.5));
         *d_world = new hitable_list(d_list,5);
-        float dist_to_focus = (cam.look_from-cam.look_at).length();
+        // float dist_to_focus = (cam.look_from-cam.look_at).length();
         *d_camera   = new camera(cam.look_from,
                                  cam.look_at,
                                  cam.vup,
                                  cam.vfov,
                                  float(nx)/float(ny),
                                  cam.aperture,
-                                 dist_to_focus);
+                                 cam.dist_to_focus);
     }
 }
 

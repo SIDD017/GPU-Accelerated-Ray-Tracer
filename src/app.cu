@@ -3,6 +3,11 @@
 
 namespace App {
 
+float Engine::lastX = SCR_WIDTH / 2.0f;
+float Engine::lastY = SCR_HEIGHT / 2.0f;
+bool Engine::first_mouse = true;
+CUDA_Tracer::camera_properties Engine::cam;
+
 Engine::Engine() {
 
   context = new Context;
@@ -34,6 +39,7 @@ Engine::Engine() {
 
   /* Set IO callbacks. */
   glfwSetFramebufferSizeCallback(context->window, framebuffer_size_callback);
+  glfwSetCursorPosCallback(context->window, mouse_callback);
 
   /* Initialize GLAD */
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -52,6 +58,61 @@ Engine::~Engine() { glfwTerminate(); }
 void Engine::framebuffer_size_callback(GLFWwindow *window, int width,
                                        int height) {
   glViewport(0, 0, width, height);
+}
+
+void Engine::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
+{
+    xoffset *= cam.sensitivity;
+    yoffset *= cam.sensitivity;
+
+    cam.Yaw   += xoffset;
+    cam.Pitch += yoffset;
+
+    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (constrainPitch)
+    {
+        if (cam.Pitch > 89.0f)
+            cam.Pitch = 89.0f;
+        if (cam.Pitch < -89.0f)
+            cam.Pitch = -89.0f;
+    }
+
+    // update Front, Right and Up Vectors using the updated Euler angles
+    updateCameraVectors();
+}
+
+void Engine::updateCameraVectors()
+{
+    // calculate the new Front vector
+    float x = cos(glm::radians(cam.Yaw)) * cos(glm::radians(cam.Pitch));
+    float y = sin(glm::radians(cam.Pitch));
+    float z = sin(glm::radians(cam.Yaw)) * cos(glm::radians(cam.Pitch));
+    CUDA_Tracer::vec3 front(x, y, z);
+    cam.look_at = cam.look_from + front;
+    // also re-calculate the Right and Up vector
+    CUDA_Tracer::vec3 right = CUDA_Tracer::cross(front, CUDA_Tracer::vec3(0,1,0));  // normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
+    cam.vup = CUDA_Tracer::unit_vector(CUDA_Tracer::cross(right, front));
+}
+
+void Engine::mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
+{
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (first_mouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        first_mouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+    lastX = xpos;
+    lastY = ypos;
+
+    ProcessMouseMovement(xoffset, yoffset);
 }
 
 // void updateCameraVectors()
@@ -141,7 +202,7 @@ void Engine::draw(CUDA_Tracer::camera_properties &cam) {
 void Engine::execute() {
 
   init_shaders();
-  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT, 10);
+  tracer = new CUDA_Tracer::Tracer(SCR_WIDTH, SCR_HEIGHT, 8);
   
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
@@ -159,13 +220,14 @@ void Engine::execute() {
   glBufferData(GL_PIXEL_UNPACK_BUFFER, SCR_WIDTH * SCR_HEIGHT * 4, NULL, GL_DYNAMIC_COPY);
   cudaGraphicsGLRegisterBuffer(&cgr, PBO, cudaGraphicsRegisterFlagsNone);
 
-  CUDA_Tracer::camera_properties cam;
   cam.look_at = CUDA_Tracer::vec3(0,0,-1);
   cam.look_from = CUDA_Tracer::vec3(3,3,2);
-  cam.aperture = 2.0;
+  cam.aperture = 0.1;
   cam.vup = CUDA_Tracer::vec3(0,1,0);
   cam.vfov = 20.0;
   cam.movement_speed = 2.5f;
+  cam.sensitivity = 0.4f;
+  cam.dist_to_focus = (cam.look_from-cam.look_at).length();
 
   /* Main Render loop */
   while (!glfwWindowShouldClose(context->window)) {

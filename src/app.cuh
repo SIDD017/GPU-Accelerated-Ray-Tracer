@@ -38,6 +38,10 @@ private:
   unsigned int VAO;
   float deltaTime;
   float lastFrame;
+  static bool first_mouse;
+  static float lastX;
+  static float lastY;
+  static CUDA_Tracer::camera_properties cam;
 public:
   Engine();
   ~Engine();
@@ -45,12 +49,15 @@ public:
   /* Callbacks */
   static void framebuffer_size_callback(GLFWwindow *window, int width,
                                         int height);
+  static void mouse_callback(GLFWwindow* window, double xposIn, double yposIn);
   static void processInput(GLFWwindow *window, CUDA_Tracer::camera_properties *cam, float deltaTime);
 
   /* Controller Layer */
   void execute();
   void init_shaders();
   void draw(CUDA_Tracer::camera_properties &cam);
+  static void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch);
+  static void updateCameraVectors();
 };
 } // namespace App
 

@@ -16,6 +16,10 @@ struct camera_properties {
     vec3 vup;
     float vfov;
     float movement_speed;
+    float Yaw;
+    float Pitch;
+    float sensitivity;
+    float dist_to_focus;
 };
 
 class Tracer {
